@@ -65,16 +65,26 @@ int month_days[MONTH_LEN] = {
     [DECEMBER]  = 31
 };
 
-#define COLUMNS 3
+#define COLUMNS 4
 
-#define WEEK_HEADER_LEN 29
-#define WEEK_HEADER " Sun Mon Tue Wed Thu Fri Sat "
-#define C_SPLITER_LEN 2
-#define C_SPLITER "  "
-#define DAY_F " %2d "
-#define DAY_SPACE "    "
-#define DAY_SPLITER "   "
+#define COLOR_RESET "\x1b[0m"
+#define FG_RED "\x1b[31m"
+#define FG_YELLOW "\x1b[33m"
 
+#define BG_WHITE "\x1b[47m"
+#define FG_BLACK "\x1b[30m"
+
+#define FG_COLOR FG_YELLOW
+
+#define C_SPLITER_LEN 1
+#define C_SPLITER " "
+#define DAY_F1 "%s%2d%s"
+#define DAY_F2 "%2d"
+#define DAY_SPACE "  "
+#define CURR_DAY_F "%s%s%2d%s"
+
+#define WEEK_HEADER_LEN 14
+#define WEEK_HEADER_F "%sSu%sMo%sTu%sWe%sTh%sFr%sSa%s"
 
 void print_center(int text_len, char const* text, int width) {
     assert(text_len <= width);
@@ -123,24 +133,26 @@ int main(int argc, char const* argv[argc]) {
         *date = (struct tm){
             .tm_year = date->tm_year,
             .tm_mday = 1,
+            .tm_mon = 0,
         };
         mktime(date);
     }
 
-    int dotm[MONTH_LEN];
+    int fst_wday[MONTH_LEN];
     int months[COLUMNS];
     int days[COLUMNS];
-    int dows[COLUMNS];
+    int week_days[COLUMNS];
+    _Bool colors[COLUMNS];
 
     int year = date->tm_year + 1900;
-    dotm[JANUARY] = date->tm_wday;
+    fst_wday[JANUARY] = date->tm_wday;
 
     if (is_leap_year(year)) {
         month_days[FEBRUARY] = 29;
     }
 
-    for (int month = FEBRUARY; month < MONTH_LEN; month += 1) {
-        dotm[month] = (month_days[month-1] + dotm[month-1]) % 7;
+    for (int mon = FEBRUARY; mon < MONTH_LEN; mon += 1) {
+        fst_wday[mon] = (month_days[mon-1] + fst_wday[mon-1]) % 7;
     }
 
 
@@ -163,14 +175,14 @@ int main(int argc, char const* argv[argc]) {
         putchar('\n');
     }
 
-    for (int month = JANUARY; month < MONTH_LEN; month += COLUMNS) {
+    for (int mon = JANUARY; mon < MONTH_LEN; mon += COLUMNS) {
         for (int c = 0; c < COLUMNS; c += 1) {
-            int m = month + c;
-            months[c] = m;
+            int s_mon = mon + c;
+            months[c] = s_mon;
             days[c] = 1;
-            dows[c] = 0;
+            colors[c] = 0;
 
-            print_center(MONTH_NAME_LEN[m], MONTH_NAME[m], WEEK_HEADER_LEN);
+            print_center(MONTH_NAME_LEN[s_mon], MONTH_NAME[s_mon], WEEK_HEADER_LEN);
             if (c < COLUMNS -1) {
                 printf(C_SPLITER);
             }
@@ -178,39 +190,55 @@ int main(int argc, char const* argv[argc]) {
         putchar('\n');
 
         for (int c = 0; c < COLUMNS; c += 1) {
-            printf(WEEK_HEADER);
+            printf(
+                WEEK_HEADER_F,
+                FG_COLOR,
+                COLOR_RESET,
+                FG_COLOR,
+                COLOR_RESET,
+                FG_COLOR,
+                COLOR_RESET,
+                FG_COLOR,
+                COLOR_RESET
+            );
             if (c < COLUMNS -1) {
                 printf(C_SPLITER);
             }
         }
         putchar('\n');
 
-        int mends = 0;
-        while (mends < COLUMNS) {
+        int m_ends = 0;
+        while (m_ends < COLUMNS) {
             for (int c = 0; c < COLUMNS; c += 1) {
-                int mon = months[c];
-                while (dows[c] < 7) {
+                int m = months[c];
+                week_days[c] = 0;
+                while (week_days[c] < 7) {
                     if (
-                        (days[c] == 1 && dows[c] < dotm[mon])
-                        || days[c] > month_days[mon]
+                        (days[c] == 1 && week_days[c] < fst_wday[m])
+                        || days[c] > month_days[m]
                     ) {
                         printf(DAY_SPACE);
-                    } else if (days[c] <= month_days[mon]) {
+                    } else if (days[c] <= month_days[m]) {
                         if (months[c] == curr_month && days[c] == curr_day) {
-                            printf("[%2d]", days[c]);
+                            printf(CURR_DAY_F, BG_WHITE, FG_BLACK, days[c], COLOR_RESET);
                         } else {
-                            printf(DAY_F, days[c]);
+                            if (colors[c]) {
+                                printf(DAY_F1, FG_COLOR, days[c], COLOR_RESET);
+                            } else {
+                                printf(DAY_F2,days[c]);
+                            }
                         }
                         days[c] += 1;
                     }
-                    dows[c] += 1;
+                    colors[c] = !colors[c];
+                    week_days[c] += 1;
                 }
-                dows[c] = 0;
-                if (days[c] > month_days[mon]) {
-                    mends += 1;
+
+                if (days[c] > month_days[m]) {
+                    m_ends += 1;
                 }
                 if (c < COLUMNS - 1) {
-                    printf(DAY_SPLITER);
+                    printf(C_SPLITER);
                 }
             }
             putchar('\n');

@@ -1,7 +1,6 @@
 #include <stdio.h>
 
-typedef enum weekday weekday;
-enum weekday {
+enum {
     SUNDAY,
     MONDAY,
     TUESDAY,
@@ -12,9 +11,8 @@ enum weekday {
     WDAYS_LEN
 };
 
-typedef enum months months;
-enum months {
-    JANUARY,
+enum {
+    JANUARY = 23U,
     FEBRUARY,
     MARCH,
     APRIL,
